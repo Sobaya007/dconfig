@@ -1,0 +1,11 @@
+{
+    "intVariable" : -114514,
+    "uintVariable" : 0,
+    "floatVariable" : -8.10,
+    "boolVariable" : false,
+    "stringVariable" : "testString2",
+    "intStaticArray" : [-3, 3, 4],
+    "intDynamicArray" : [-3, 3, 4],
+    "multiArray" : [[4,5,6], [1,2,3]],
+    "structVariable" : -334
+}

@@ -1,0 +1,7 @@
+name "example"
+description "This is an example how to use dconfig in your project by using dub"
+authors "sobaya"
+copyright "Copyright © 2018, sobaya"
+
+targetPath "bin"
+dependency "dconfig" path=".."
