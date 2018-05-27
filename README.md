@@ -9,8 +9,9 @@ Add dependency for dconfig to your `dub.sdl`(`dub.json)`
 
 ### example
 ```d
+import dconfig;
+
 void main() {
-    import dconfig;
     
     // prepare config class
     class Test {
