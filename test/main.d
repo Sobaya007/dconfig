@@ -9,6 +9,7 @@ unittest {
         mixin HandleConfig;
 
         private struct IntAcceptable {int x; alias x this; }
+        enum Color {Red, Green, Blue }
 
         @config("test.json") {
             int intVariable;
@@ -20,6 +21,7 @@ unittest {
             int[] intDynamicArray;
             int[3][2] multiArray;
             IntAcceptable structVariable;
+            Color enumVariable;
         }
 
         this() {
@@ -44,6 +46,7 @@ unittest {
         assert(intDynamicArray == [3, 3, 4]);
         assert(multiArray == [[1,2,3], [4,5,6]]);
         assert(structVariable == 334);
+        assert(enumVariable == Color.Blue);
 
         copy("test2.json", "test.json");
         ConfigManager().load();
@@ -57,6 +60,7 @@ unittest {
         assert(intDynamicArray == [-3, 3, 4]);
         assert(multiArray == [[4,5,6], [1,2,3]]);
         assert(structVariable == -334);
+        assert(enumVariable == Color.Green);
     }
 
     remove("test.json");
@@ -72,6 +76,7 @@ unittest {
         assert(intDynamicArray == []);
         assert(multiArray == [[0,0,0], [0,0,0]]);
         assert(structVariable == 0);
+        assert(enumVariable == Color.Red);
 
         intVariable = 1;
         uintVariable = 1;
@@ -82,6 +87,7 @@ unittest {
         intDynamicArray = [9,3,1];
         multiArray = [[1,1,4], [5,1,4]];
         structVariable = 1_000_000_007;
+        enumVariable = Color.Green;
 
         saveConfig();
     }
@@ -97,6 +103,7 @@ unittest {
         assert(intDynamicArray == [9,3,1]);
         assert(multiArray == [[1,1,4], [5,1,4]]);
         assert(structVariable == 1_000_000_007);
+        assert(enumVariable == Color.Green);
     }
 
     remove("test.json");

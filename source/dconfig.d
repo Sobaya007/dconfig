@@ -93,10 +93,13 @@ private class ConfigFile {
 static auto conv(T)(string name, JSONValue value) {
 
     import std.traits : isAssignable, isArray, isStaticArray, ForeachType;
+    import std.conv;
 
     switch (value.type) {
         case JSON_TYPE.STRING:
-            static if (isAssignable!(T, string)) {
+            static if (is(T == enum)) {
+                return value.str().to!T;
+            } else static if (isAssignable!(T, string)) {
                 return value.str();
             } else {
                 break;
@@ -217,6 +220,7 @@ mixin template HandleConfig() {
         JSONValue[string][string] values;
         static foreach (i; 0..symbols.length) {{
             import std.string : replace;
+            import std.conv;
 
             enum SymbolName = symbols[i].stringof.replace("this.", "");
             alias SymbolType = typeof(symbols[i]);
@@ -224,10 +228,14 @@ mixin template HandleConfig() {
 
             if (FilePath !in values) values[FilePath] = parseJSON("{}").object();
 
-            values[FilePath][SymbolName] = mixin("this." ~ SymbolName);
+            static if (is(typeof(mixin("this."~SymbolName)) == enum)) {
+                values[FilePath][SymbolName] = mixin("this." ~ SymbolName).to!string;
+            } else {
+                values[FilePath][SymbolName] = mixin("this." ~ SymbolName);
+            }
         }}
 
-        // first loading
+        // save each file
         foreach (filePath, value; values) {
             ConfigManager().getFile(filePath).save(value);
         }

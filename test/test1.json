@@ -7,5 +7,6 @@
     "intStaticArray" : [3, 3, 4],
     "intDynamicArray" : [3, 3, 4],
     "multiArray" : [[1,2,3], [4,5,6]],
-    "structVariable" : 334
+    "structVariable" : 334,
+    "enumVariable" : "Blue"
 }
