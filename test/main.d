@@ -60,4 +60,44 @@ unittest {
     }
 
     remove("test.json");
+
+    with(new Config) {
+        import std.math : isNaN;
+        assert(intVariable == 0);
+        assert(uintVariable == 0);
+        assert(floatVariable.isNaN);
+        assert(boolVariable == false);
+        assert(stringVariable == "");
+        assert(intStaticArray == [0,0,0]);
+        assert(intDynamicArray == []);
+        assert(multiArray == [[0,0,0], [0,0,0]]);
+        assert(structVariable == 0);
+
+        intVariable = 1;
+        uintVariable = 1;
+        floatVariable = 4;
+        boolVariable = true;
+        stringVariable = "514";
+        intStaticArray = [8,1,0];
+        intDynamicArray = [9,3,1];
+        multiArray = [[1,1,4], [5,1,4]];
+        structVariable = 1_000_000_007;
+
+        saveConfig();
+    }
+
+    with(new Config) {
+        import std.math : isNaN, approxEqual;
+        assert(intVariable == 1);
+        assert(uintVariable == 1);
+        assert(approxEqual(floatVariable, 4, float.epsilon));
+        assert(boolVariable == true);
+        assert(stringVariable == "514");
+        assert(intStaticArray == [8,1,0]);
+        assert(intDynamicArray == [9,3,1]);
+        assert(multiArray == [[1,1,4], [5,1,4]]);
+        assert(structVariable == 1_000_000_007);
+    }
+
+    remove("test.json");
 }

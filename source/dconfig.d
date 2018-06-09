@@ -67,12 +67,24 @@ private class ConfigFile {
 
 
     void load() {
-        import std.file : readText;
+        import std.file : exists, readText;
+
+        if (!path.exists) return;
 
         auto jsonData = parseJSON(readText(path));
         foreach (string key, value; jsonData) {
             emit(path, key, value);
         }
+    }
+
+    void save(JSONValue[string] writtenValue) {
+        import std.file : readText, write, exists;
+
+        auto jsonData = parseJSON(path.exists ? readText(path) : "{}");
+        foreach (string key, value; writtenValue) {
+            jsonData[key] = value;
+        }
+        write(path, jsonData.toPrettyString());
     }
 }
 
@@ -194,4 +206,30 @@ mixin template HandleConfig() {
         mixin("this." ~ SymbolName) = conv!(SymbolType)(name, value);
     }
 
+    void saveConfig() {
+        import std.algorithm : sort, uniq;
+        import std.traits : getSymbolsByUDA, getUDAs;
+        import std.meta : AliasSeq;
+        import std.json;
+
+        alias symbols = AliasSeq!(getSymbolsByUDA!(typeof(this), config));
+        
+        JSONValue[string][string] values;
+        static foreach (i; 0..symbols.length) {{
+            import std.string : replace;
+
+            enum SymbolName = symbols[i].stringof.replace("this.", "");
+            alias SymbolType = typeof(symbols[i]);
+            enum FilePath = getUDAs!(symbols[i], config)[0].filePath;
+
+            if (FilePath !in values) values[FilePath] = parseJSON("{}").object();
+
+            values[FilePath][SymbolName] = mixin("this." ~ SymbolName);
+        }}
+
+        // first loading
+        foreach (filePath, value; values) {
+            ConfigManager().getFile(filePath).save(value);
+        }
+    }
 }
