@@ -153,10 +153,17 @@ static struct config {
 }
 
 
-mixin template HandleConfig() {
+mixin template HandleConfig(bool autoCreateConstructor=false) {
 
     // for a class mixin this, this import is needed.
     import std.json;
+
+    // mostly you don't need constructor.
+    static if (autoCreateConstructor) {
+        this() {
+            this.initializeConfig();
+        }
+    }
 
     // activate config variables.
     // after calling this, config variables are assigned and accept reloading.
@@ -176,7 +183,7 @@ mixin template HandleConfig() {
             enum FilePath = getUDAs!(symbols[i], config)[0].filePath;
 
             // connect ConfigManager.setValue -> ConfigVariable.setValue
-            ConfigManager().connect(&this.setValue!(FilePath, SymbolName, SymbolType));
+            ConfigManager().connect(&__setValue__!(FilePath, SymbolName, SymbolType));
 
             files ~= FilePath;
         }}
@@ -187,11 +194,11 @@ mixin template HandleConfig() {
         }
     }
 
-    private void setValue(string FilePath, string SymbolName, SymbolType)(string path, string name, JSONValue value) {
-        if (FilePath != path) return;
-        if (SymbolName != name) return;
+    private void __setValue__(string FilePath, string SymbolName, SymbolType)(string __path__, string __name__, JSONValue __value__) {
+        if (FilePath != __path__) return;
+        if (SymbolName != __name__) return;
 
-        mixin("this." ~ SymbolName) = conv!(SymbolType)(name, value);
+        mixin(SymbolName) = conv!(SymbolType)(__name__, __value__);
     }
 
 }
