@@ -67,6 +67,36 @@ void main() {
         assert(intDynamicArray == [-3, 3, 4]);
         assert(multiArray == [[4,5,6], [1,2,3]]);
         assert(structVariable == -334);
+
+        // you can modify the values.
+        intVariable = -810;
+        uintVariable = 1919;
+        floatVariable = 3.34;
+        boolVariable = true;
+        stringVariable = "testString3";
+        intStaticArray = [25, 25, 21];
+        intDynamicArray = [2, 5, 2, 5, 2, 1];
+        multiArray= [[3,3,4], [9,3,1]];
+        structVariable = 1;
+
+        // and you can save the values.
+        saveConfig();
+    }
+
+    // you want to restart?
+    with(new ConfigClass()) {
+        import std.math : approxEqual;
+
+        // ok, you can load the saved values
+        assert(intVariable == -810);
+        assert(uintVariable == 1919);
+        assert(approxEqual(floatVariable, 3.34, float.epsilon));
+        assert(boolVariable == true);
+        assert(stringVariable == "testString3");
+        assert(intStaticArray == [25, 25, 21]);
+        assert(intDynamicArray == [2, 5, 2, 5, 2, 1]);
+        assert(multiArray== [[3,3,4], [9,3,1]]);
+        assert(structVariable == 1);
     }
 
     // delete temporary json file

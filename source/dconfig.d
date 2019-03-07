@@ -78,7 +78,7 @@ private class ConfigFile {
 
 
 // converts JSONValue to normal type. (name is necessary only for assertion)
-static auto conv(T)(string name, JSONValue value) {
+auto conv(T)(string name, JSONValue value) {
 
     import std.traits : isAssignable, isArray, isStaticArray, ForeachType;
 
@@ -146,7 +146,6 @@ static auto conv(T)(string name, JSONValue value) {
     assert(false, format!"Expected Type is '%s', but %s's type is '%s'."(T.stringof, name, value.type));
 }
 
-
 // UDA for config variable
 static struct config {
     string filePath;
@@ -167,7 +166,7 @@ mixin template HandleConfig(bool autoCreateConstructor=false) {
 
     // activate config variables.
     // after calling this, config variables are assigned and accept reloading.
-    private void initializeConfig() {
+    void initializeConfig() {
         import std.algorithm : sort, uniq;
         import std.traits : getSymbolsByUDA, getUDAs;
         import std.meta : AliasSeq;
@@ -194,11 +193,49 @@ mixin template HandleConfig(bool autoCreateConstructor=false) {
         }
     }
 
-    private void __setValue__(string FilePath, string SymbolName, SymbolType)(string __path__, string __name__, JSONValue __value__) {
-        if (FilePath != __path__) return;
-        if (SymbolName != __name__) return;
+    private void __setValue__(string __FilePath__, string __SymbolName__, __SymbolType__)(string __path__, string __name__, JSONValue __value__) {
+        if (__FilePath__ != __path__) return;
+        if (__SymbolName__ != __name__) return;
 
-        mixin(SymbolName) = conv!(SymbolType)(__name__, __value__);
+        mixin(__SymbolName__) = conv!(__SymbolType__)(__name__, __value__);
     }
 
+    void saveConfig() {
+        import std.algorithm : sort, uniq;
+        import std.conv : to;
+        import std.file : write;
+        import std.json : parseJSON;
+        import std.traits : getSymbolsByUDA, getUDAs;
+        import std.meta : AliasSeq;
+
+        alias symbols = AliasSeq!(getSymbolsByUDA!(typeof(this), config));
+        
+        JSONValue[string] result;
+        static foreach (i; 0..symbols.length) {{
+            import std.string : replace;
+
+            enum SymbolName = symbols[i].stringof.replace("this.", "");
+            alias SymbolType = typeof(symbols[i]);
+            enum FilePath = getUDAs!(symbols[i], config)[0].filePath;
+
+
+            if (FilePath !in result) result[FilePath] = parseJSON("{}");
+            result[FilePath].object[SymbolName] = parseJSON(toJsonString(mixin(SymbolName)));
+        }}
+        foreach (filePath, content; result) {
+            write(filePath, content.toString);
+        }
+    }
+
+    private string toJsonString(T)(T value) {
+        import std.conv : to;
+        import std.format : format;
+        import std.traits : isSomeString;
+
+        static if (isSomeString!T) {
+            return value.to!string.format!`"%s"`;
+        } else {
+            return value.to!string;
+        }
+    }
 }
