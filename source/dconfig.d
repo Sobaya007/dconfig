@@ -1,4 +1,6 @@
 import std.json;
+import std.traits;
+import std.format;
 
 class ConfigManager {
 
@@ -76,73 +78,60 @@ private class ConfigFile {
     }
 }
 
-
 // converts JSONValue to normal type. (name is necessary only for assertion)
 auto conv(T)(string name, JSONValue value) {
-
-    import std.traits : isAssignable, isArray, isStaticArray, ForeachType;
-
-    switch (value.type) {
-        case JSON_TYPE.STRING:
-            static if (isAssignable!(T, string)) {
-                return value.str();
-            } else {
-                break;
-            }
-        case JSON_TYPE.ARRAY:
-            static if (isArray!(T) && !isAssignable!(T, string)) {
-                import std.algorithm : map;
-                import std.array;
-                static if (isStaticArray!(T)) {
-                    import std.format;
-                    auto jsonArray = value.array();
-                    assert(T.length == jsonArray.length, format!"Expected length is '%d', but %s's length is '%d'."(T.length, name, jsonArray.length));
-                    T ar;
-                    foreach (i, v; jsonArray) {
-                        ar[i] = conv!(ForeachType!(T))(name, v);
-                    }
-                    return ar;
-                } else {
-                    return value.array().map!(v => conv!(ForeachType!(T))(name, v)).array;
-                }
-            } else {
-                break;
-            }
-        case JSON_TYPE.FLOAT:
-            static if (isAssignable!(T, double) && !isArray!(T)) {
-                return cast(float)value.floating();
-            } else {
-                break;
-            }
-        case JSON_TYPE.INTEGER:
-            static if (isAssignable!(T, int) && !isArray!(T)) {
-                return cast(int)value.integer();
-            } else {
-                break;
-            }
-        case JSON_TYPE.UINTEGER:
-            static if (isAssignable!(T, uint) && !isArray!(T)) {
-                return cast(uint)value.uinteger();
-            } else {
-                break;
-            }
-        case JSON_TYPE.TRUE:
-            static if (isAssignable!(T, bool) && !isArray!(T)) {
-                return true;
-            } else {
-                break;
-            }
-        case JSON_TYPE.FALSE:
-            static if (isAssignable!(T, bool) && !isArray!(T)) {
-                return false;
-            } else {
-                break;
-            }
-        default:
+    static if (isAssociativeArray!T && is(KeyType!T == string)) {
+        T result;
+        foreach (k, v; value.object()) {
+            result[k] = conv!(ValueType!T)(format!`%s["%s"]`(name, k), v);
+        }
+        return result;
+    } else static if (isAssignable!(T, string)) {
+        return value.str();
+    } else static if (isArray!(T)) {
+        import std.algorithm : map;
+        import std.array : array;
+        static if (isStaticArray!(T)) {
             import std.format;
-            assert(false, format!"Type '%s' is not allowed."(value.type));
+            auto jsonArray = value.array();
+            assert(T.length == jsonArray.length,
+                    format!"Expected length is '%d', but %s's length is '%d'."(T.length, name, jsonArray.length));
+            T result;
+            foreach (i, v; jsonArray) {
+                result[i] = conv!(ForeachType!(T))(format!"%s[%d]"(name, i), v);
+            }
+            return result;
+        } else {
+            return value.array().map!(v => conv!(ForeachType!(T))(name, v)).array;
+        }
+    } else static if (isAssignable!(T, double)) {
+        switch (value.type) {
+            case JSON_TYPE.INTEGER:  return cast(int)value.integer();
+            case JSON_TYPE.UINTEGER: return cast(uint)value.uinteger();
+            case JSON_TYPE.FLOAT:    return cast(float)value.floating();
+            default: break;
+        }
+    } else static if (isAssignable!(T, int)) {
+        switch (value.type) {
+            case JSON_TYPE.INTEGER:  return cast(int)value.integer();
+            case JSON_TYPE.UINTEGER: return cast(uint)value.uinteger();
+            default: break;
+        }
+    } else static if (isAssignable!(T, uint)) {
+        switch (value.type) {
+            case JSON_TYPE.INTEGER:  return cast(int)value.integer();
+            case JSON_TYPE.UINTEGER: return cast(uint)value.uinteger();
+            default: break;
+        }
+    } else static if (isAssignable!(T, bool)) {
+        switch (value.type) {
+            case JSON_TYPE.TRUE:  return true;
+            case JSON_TYPE.FALSE: return false;
+            default: break;
+        }
+    } else {
+        static assert(false, "Invalid type");
     }
-    import std.format;
     assert(false, format!"Expected Type is '%s', but %s's type is '%s'."(T.stringof, name, value.type));
 }
 
@@ -228,11 +217,17 @@ mixin template HandleConfig(bool autoCreateConstructor=false) {
     }
 
     private string toJsonString(T)(T value) {
+        import std.algorithm : map;
+        import std.array : join;
         import std.conv : to;
         import std.format : format;
-        import std.traits : isSomeString;
+        import std.traits : isSomeString, isAssociativeArray;
 
-        static if (isSomeString!T) {
+        static if (isAssociativeArray!T) {
+            return format!"{
+                %s
+            }"(value.byKeyValue.map!(t => format!`"%s": %s`(t.key, toJsonString(t.value))).join(",\n"));
+        } else static if (isSomeString!T) {
             return value.to!string.format!`"%s"`;
         } else {
             return value.to!string;

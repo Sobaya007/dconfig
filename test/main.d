@@ -19,6 +19,7 @@ unittest {
             int[3] intStaticArray;
             int[] intDynamicArray;
             int[3][2] multiArray;
+            int[string] associativeArray;
             IntAcceptable structVariable;
         }
 
@@ -43,6 +44,7 @@ unittest {
         assert(intStaticArray == [3, 3, 4]);
         assert(intDynamicArray == [3, 3, 4]);
         assert(multiArray == [[1,2,3], [4,5,6]]);
+        assert(associativeArray == ["key1" : 1, "key2" : 2]);
         assert(structVariable == 334);
 
         copy("test2.json", "test.json");
@@ -56,6 +58,7 @@ unittest {
         assert(intStaticArray == [-3, 3, 4]);
         assert(intDynamicArray == [-3, 3, 4]);
         assert(multiArray == [[4,5,6], [1,2,3]]);
+        assert(associativeArray == ["key1" : 3, "key2" : 4]);
         assert(structVariable == -334);
     }
 
