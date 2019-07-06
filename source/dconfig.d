@@ -1,6 +1,5 @@
-import std.json;
-import std.traits;
-import std.format;
+import std.signals;
+import std : JSONValue, isAssociativeArray, isAssignable, isArray, isStaticArray, ForeachType, JSONType;
 
 class ConfigManager {
 
@@ -13,7 +12,6 @@ class ConfigManager {
     }
 
     /* Signal Declaration */
-    import std.signals;
     mixin Signal;
     mixin Signal!(string, string, JSONValue);
 
@@ -22,15 +20,14 @@ class ConfigManager {
     private ConfigFile[] files;
 
 
-    // load all config files and update config variables
+    /** load all config files and update config variables */
     void load() {
         emit();
     }
 
     // return ConfigFile instance using cache if available
     ConfigFile getFile(string path) {
-        import std.algorithm : find;
-        import std.array : empty, front;
+        import std : find, empty, front;
 
         auto findResult = this.files.find!(file => file.path == path);
         if (!findResult.empty) return findResult.front;
@@ -51,7 +48,6 @@ class ConfigManager {
 private class ConfigFile {
 
     /* Signal Declaration */
-    import std.signals;
     mixin Signal!(string, string, JSONValue);
 
     /* Field Declaration */
@@ -69,7 +65,7 @@ private class ConfigFile {
 
 
     void load() {
-        import std.file : readText;
+        import std : readText, parseJSON;
 
         auto jsonData = parseJSON(readText(path));
         foreach (string key, value; jsonData) {
@@ -78,8 +74,10 @@ private class ConfigFile {
     }
 }
 
-// converts JSONValue to normal type. (name is necessary only for assertion)
+/** converts JSONValue to normal type. (name is necessary only for assertion) */
 auto conv(T)(string name, JSONValue value) {
+    import std : map, array, format;
+
     static if (isAssociativeArray!T && is(KeyType!T == string)) {
         T result;
         foreach (k, v; value.object()) {
@@ -89,10 +87,7 @@ auto conv(T)(string name, JSONValue value) {
     } else static if (isAssignable!(T, string)) {
         return value.str();
     } else static if (isArray!(T)) {
-        import std.algorithm : map;
-        import std.array : array;
         static if (isStaticArray!(T)) {
-            import std.format;
             auto jsonArray = value.array();
             assert(T.length == jsonArray.length,
                     format!"Expected length is '%d', but %s's length is '%d'."(T.length, name, jsonArray.length));
@@ -106,36 +101,44 @@ auto conv(T)(string name, JSONValue value) {
         }
     } else static if (isAssignable!(T, double)) {
         switch (value.type) {
-            case JSON_TYPE.INTEGER:  return cast(int)value.integer();
-            case JSON_TYPE.UINTEGER: return cast(uint)value.uinteger();
-            case JSON_TYPE.FLOAT:    return cast(float)value.floating();
+            case JSONType.integer:  return cast(int)value.integer();
+            case JSONType.uinteger: return cast(uint)value.uinteger();
+            case JSONType.float_:    return cast(float)value.floating();
             default: break;
         }
     } else static if (isAssignable!(T, int)) {
         switch (value.type) {
-            case JSON_TYPE.INTEGER:  return cast(int)value.integer();
-            case JSON_TYPE.UINTEGER: return cast(uint)value.uinteger();
+            case JSONType.integer:  return cast(int)value.integer();
+            case JSONType.uinteger: return cast(uint)value.uinteger();
             default: break;
         }
     } else static if (isAssignable!(T, uint)) {
         switch (value.type) {
-            case JSON_TYPE.INTEGER:  return cast(int)value.integer();
-            case JSON_TYPE.UINTEGER: return cast(uint)value.uinteger();
+            case JSONType.integer:  return cast(int)value.integer();
+            case JSONType.uinteger: return cast(uint)value.uinteger();
             default: break;
         }
     } else static if (isAssignable!(T, bool)) {
         switch (value.type) {
-            case JSON_TYPE.TRUE:  return true;
-            case JSON_TYPE.FALSE: return false;
+            case JSONType.true_:  return true;
+            case JSONType.false_: return false;
             default: break;
         }
     } else {
         static assert(false, "Invalid type");
     }
-    assert(false, format!"Expected Type is '%s', but %s's type is '%s'."(T.stringof, name, value.type));
+
+    // This implementation is for avoiding deprecation warning of JSONType.
+    final switch (value.type) {
+        static foreach (t; [JSONType.null_, JSONType.string, JSONType.integer,
+                JSONType.uinteger, JSONType.float_, JSONType.array, JSONType.object, JSONType.true_, JSONType.false_]) {
+            case t:
+                assert(false, format!"Expected Type is '%s', but %s's type is '%s'."(T.stringof, name, t.stringof));
+        }
+    }
 }
 
-// UDA for config variable
+/** UDA for config variable */
 static struct config {
     string filePath;
 }
@@ -156,15 +159,12 @@ mixin template HandleConfig(bool autoCreateConstructor=false) {
     // activate config variables.
     // after calling this, config variables are assigned and accept reloading.
     void initializeConfig() {
-        import std.algorithm : sort, uniq;
-        import std.traits : getSymbolsByUDA, getUDAs;
-        import std.meta : AliasSeq;
+        import std : sort, uniq, getSymbolsByUDA, getUDAs, AliasSeq, replace;
 
         alias symbols = AliasSeq!(getSymbolsByUDA!(typeof(this), config));
         
         string[] files;
         static foreach (i; 0..symbols.length) {{
-            import std.string : replace;
 
             enum SymbolName = symbols[i].stringof.replace("this.", "");
             alias SymbolType = typeof(symbols[i]);
@@ -190,12 +190,8 @@ mixin template HandleConfig(bool autoCreateConstructor=false) {
     }
 
     void saveConfig() {
-        import std.algorithm : sort, uniq;
-        import std.conv : to;
+        import std : sort ,uniq, to, parseJSON, getSymbolsByUDA, getUDAs, AliasSeq;
         import std.file : write;
-        import std.json : parseJSON;
-        import std.traits : getSymbolsByUDA, getUDAs;
-        import std.meta : AliasSeq;
 
         alias symbols = AliasSeq!(getSymbolsByUDA!(typeof(this), config));
         
@@ -217,11 +213,7 @@ mixin template HandleConfig(bool autoCreateConstructor=false) {
     }
 
     private string toJsonString(T)(T value) {
-        import std.algorithm : map;
-        import std.array : join;
-        import std.conv : to;
-        import std.format : format;
-        import std.traits : isSomeString, isAssociativeArray;
+        import std : map, join, to, format, isSomeString, isAssociativeArray;
 
         static if (isAssociativeArray!T) {
             return format!"{
