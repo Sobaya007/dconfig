@@ -1,5 +1,5 @@
 import std.signals;
-import std : JSONValue, isAssociativeArray, isAssignable, isArray, isStaticArray, ForeachType, JSONType;
+import std : JSONValue, isAssociativeArray, isAssignable, isArray, isStaticArray, ForeachType, KeyType, ValueType, JSONType;
 
 class ConfigManager {
 
@@ -76,7 +76,7 @@ private class ConfigFile {
 
 /** converts JSONValue to normal type. (name is necessary only for assertion) */
 auto conv(T)(string name, JSONValue value) {
-    import std : map, array, format;
+    import std : map, array, format, to;
 
     static if (isAssociativeArray!T && is(KeyType!T == string)) {
         T result;
@@ -103,7 +103,7 @@ auto conv(T)(string name, JSONValue value) {
         switch (value.type) {
             case JSONType.integer:  return cast(int)value.integer();
             case JSONType.uinteger: return cast(uint)value.uinteger();
-            case JSONType.float_:    return cast(float)value.floating();
+            case JSONType.float_:   return cast(float)value.floating();
             default: break;
         }
     } else static if (isAssignable!(T, int)) {
@@ -122,6 +122,11 @@ auto conv(T)(string name, JSONValue value) {
         switch (value.type) {
             case JSONType.true_:  return true;
             case JSONType.false_: return false;
+            default: break;
+        }
+    } else static if (is(T == enum)) {
+        switch (value.type) {
+            case JSONType.string: return value.str().to!T;
             default: break;
         }
     } else {

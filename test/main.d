@@ -4,6 +4,8 @@ void main() {}
 
 unittest {
 
+    enum EnumType { Value1, Value2 }
+
     class Config {
 
         mixin HandleConfig;
@@ -21,6 +23,7 @@ unittest {
             int[3][2] multiArray;
             int[string] associativeArray;
             IntAcceptable structVariable;
+            EnumType enumVariable;
         }
 
         this() {
@@ -46,6 +49,7 @@ unittest {
         assert(multiArray == [[1,2,3], [4,5,6]]);
         assert(associativeArray == ["key1" : 1, "key2" : 2]);
         assert(structVariable == 334);
+        assert(enumVariable == EnumType.Value1);
 
         copy("test2.json", "test.json");
         ConfigManager().load();
@@ -60,6 +64,7 @@ unittest {
         assert(multiArray == [[4,5,6], [1,2,3]]);
         assert(associativeArray == ["key1" : 3, "key2" : 4]);
         assert(structVariable == -334);
+        assert(enumVariable == EnumType.Value2);
     }
 
     remove("test.json");

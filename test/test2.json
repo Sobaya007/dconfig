@@ -11,5 +11,6 @@
         "key1" : 3,
         "key2" : 4
     },
-    "structVariable" : -334
+    "structVariable" : -334,
+    "enumVariable": "Value2"
 }
